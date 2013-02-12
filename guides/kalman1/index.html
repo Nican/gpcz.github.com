@@ -1,0 +1,453 @@
+<!doctype html>
+<!-- https://github.com/paulirish/html5-boilerplate/blob/master/index.html -->
+<!-- paulirish.com/2008/conditional-stylesheets-vs-css-hacks-answer-neither/ -->
+<!--[if lt IE 7 ]> <html lang="en" class="no-js ie6"> <![endif]-->
+<!--[if IE 7 ]>    <html lang="en" class="no-js ie7"> <![endif]-->
+<!--[if IE 8 ]>    <html lang="en" class="no-js ie8"> <![endif]-->
+<!--[if (gte IE 9)|!(IE)]><!--> <html lang="en" class="no-js"> <!--<![endif]-->
+<head>
+    <meta charset="">
+
+  <!-- Always force latest IE rendering engine (even in intranet) & Chrome Frame
+       Remove this if you use the .htaccess -->
+  <meta http-equiv="X-UA-Compatible" content="">
+
+  <!-- encoding must be specified within the first 512 bytes
+        www.whatwg.org/specs/web-apps/current-work/multipage/semantics.html#charset -->
+
+  <!-- meta element for compatibility mode needs to be before
+        all elements except title & meta
+        msdn.microsoft.com/en-us/library/cc288325(VS.85).aspx -->
+  <!-- Chrome Frame is only invoked if meta element for
+        compatibility mode is within the first 1K bytes
+        code.google.com/p/chromium/issues/detail?id=23003 -->
+
+  <title>Greg Czerniak's Website - Kalman Filters for Undergrads 1</title>
+  <meta name="description" content="Linear Kalman Filter tutorial.">
+  <meta name="author" content="Gregory Czerniak">
+
+  <!--  Mobile viewport optimized: j.mp/bplateviewport -->
+  <meta name="viewport" content="">
+
+    <!-- Place favicon.ico & apple-touch-icon.png
+        in the root of your domain and delete these references -->
+  <link rel="shortcut icon" href="/favicon.ico">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  
+    <link rel="stylesheet" href="/media/css/site.css">
+  <link rel="stylesheet" href="/media/css/syntax.css">
+  
+    <!-- All JavaScript at the bottom, except for Modernizr which
+        enables HTML5 elements & feature detects -->
+    <script src="/media/js/libs/modernizr-1.7.min.js"></script>
+    </head>
+<body id="index">
+    <div id="container">
+            <div id="main" role="main">
+          <header class="banner clearfix">
+          <h1>Greg Czerniak's Website</h1>
+            <h3>-</h3>                              <nav class=main_nav>
+    <ul>
+                <li>
+            <a title="Home Page"
+                class="button white home"
+                href="/index.html">
+                Home
+            </a>
+        </li>        <li>
+            <a title="Code"
+                class="button white code"
+                href="/code">
+                Code
+            </a>
+        </li>        <li>
+            <a title="Games"
+                class="button white games"
+                href="/games">
+                Games
+            </a>
+        </li>        <li>
+            <a title="Guides"
+                class="button white guides"
+                href="/guides">
+                Guides
+            </a>
+        </li>    </ul>
+</nav>
+                    </header>
+          <section class="content">
+          <p><b>NOTE: This guide is currently a work in progress.</b></p>
+<br />
+<h2>Introduction</h2>
+<br />
+<p>Kalman filters let you use mathematical models despite having error-filled real-time measurements. Programmers dealing with real-world data should know them. Publications explaining Kalman filters are hard for Computer Scientists/Engineers to understand since they expect you to know control theory. I wrote this guide for people who want to learn Kalman filters but never took a control theory course.</p>
+<br />
+<p><strong>DISCLAIMER: This guide teaches amateur-level Kalman filtering for hobbyists. If lives depend on your Kalman  filter (such as manned aviation, ICBMs, medical instruments, etc), do not rely on this guide! I skip a lot of details necessary for serious use!</strong></p>
+<br />
+<p><span style="text-decoration: underline;">This guide will cover</span>:</p>
+<ul>
+<li>When Kalman filters can help.</li>
+<li>Examples of solving simple problems with Kalman filters.</li>
+<li>Examples of how to convert normal-looking equations into Kalman filter matrices.</li>
+<li>Example code implementing Kalman filters in Python.</li>
+</ul>
+<p><span style="text-decoration: underline;">This guide WON'T cover</span>:</p>
+<ul>
+<li>Kalman filter history. Please consult the University of North Carolina at Chapel Hill's <a href="http://www.cs.unc.edu/~welch/kalman/">great website</a> for information on this subject.</li>
+<li>When and why Kalman filters are optimal.</li>
+<li>How to tune Kalman filters for performance.</li>
+<li>In-depth details (such as exceptions to guidelines).</li>
+</ul>
+<p>This guide aims to quickly get you 80% of the way toward understanding Kalman filters. I won't cover the remaining 20% since that's not the point of this guide. If you need to know Kalman filters to that depth, find a more detailed guide.</p>
+<p>&nbsp;</p>
+<h2>When Can Kalman Filters Help?</h2>
+<br />
+<p>Kalman filters can help when four conditions are true:</p>
+<ol>
+<li>You can get measurements of a situation at a constant rate.</li>
+<li>The measurements have error that follows a bell curve. </li>
+<li>You know the mathematics behind the situation.</li>
+<li>You want an estimate of what's really happening.</li>
+</ol>
+<p>There are exceptions, but I'll let other publications explain them.</p>
+<p>&nbsp;</p>
+<h2>Linear Kalman Filters</h2>
+<br />
+<h3>Prerequisites</h3>
+<p>To understand these linear Kalman filter examples, you will need a basic understanding of:</p>
+<ul>
+<li>High school physics</li>
+<li>Matrix algebra</li>
+<li>Python for the programming parts.</li>
+</ul>
+<h3>Basics</h3>
+<p>Here are the most important concepts you need to know:</p>
+<ul>
+<li>Kalman Filters are discrete. That is, they rely on measurement samples taken between repeated but constant periods of time. Although you can approximate it fairly well, you don't know what happens between the samples.</li>
+<li>Kalman Filters are recursive. This means its prediction of the future relies on the state of the present (position, velocity, acceleration, etc) as well as a guess about what any controllable parts tried to do to affect the situation (such as a rudder or steering differential).</li>
+<li>Kalman Filters work by making a prediction of the future, getting a measurement from reality, comparing the two, moderating this difference, and adjusting its estimate with this moderated value.</li>
+<li>The more you understand the mathematical model of your situation, the more accurate the Kalman filter's results will be.</li>
+<li>If your model is completely consistent with what's actually happening, the Kalman filter's estimate will eventually converge with what's actually happening. </li>
+</ul>
+<p>When you start up a Kalman Filter, these are the things it expects:</p>
+<ul>
+<li>The mathematical model of the system, represented by matrices A, B, and H.</li>
+<li>An initial estimate about the complete state of the system, given as a vector x.</li>
+<li>An initial estimate about the error of the system, given as a matrix P.</li>
+<li>Estimates about the general process and measurement error of the system, represented by matrices Q and R.</li>
+</ul>
+<p>During each time step, you are expected to give it the following information:</p>
+<ul>
+<li>A vector containing the most current control state (vector "u"). This is the system's guess as to what it did to affect the situation (such as steering commands).</li>
+<li>A vector containing the most current measurements that can be used to calculate the state (vector "z").</li>
+</ul>
+<p>After the calculations, you get the following information:</p>
+<ul>
+<li>The most current estimate of the true state of the system.</li>
+<li>The most current estimate of the overall error of the system. </li>
+</ul>
+<h3>The Equations</h3>
+<p><strong>NOTE: The equations are here for exposition and reference. You aren't expected to understand the equations on the first read.</strong></p>
+<p>The Kalman Filter is like a function in a programming language: it's a process of sequential equations with inputs, constants, and outputs. Here I've color-coded the filter equations to illustrate which parts are which. If you are using the Kalman Filter like a black box, you can ignore the gray intermediary variables.<strong>&nbsp;<br /></strong></p>
+<p>&nbsp;</p>
+<p style="text-align: center;"><span style="color: #0000ff;">BLUE</span> = inputs <span style="color: #ff6600;">ORANGE</span> = outputs BLACK = constants <span style="color: #c0c0c0;">GRAY</span> = intermediary variables</p>
+<table style="width: 100%;" border="1">
+<tbody>
+<tr>
+<td>
+<p>State Prediction</p>
+<p>(Predict where we're gonna be)</p>
+</td>
+<td><img src="kalman1/4c75fd3eb1ab0ef2e1f2dc2f6b43fd8447fe2610be44702b0d6ec585e08fa516.png"></td>
+</tr>
+<tr>
+<td>
+<p>Covariance Prediction</p>
+<p>(Predict how much error)</p>
+</td>
+<td><img src="kalman1/392ce2464b295b61e2064146e2a3051c571c12eabe430179b6c8d7fedd8de5a0.png"></td>
+</tr>
+<tr>
+<td>
+<p>Innovation</p>
+<p>(Compare reality against prediction)</p>
+</td>
+<td><img src="kalman1/ed46974147e2e63dd373030c17dd4bb78a7a4f5b46d8e05750768785646a065e.png"></td>
+</tr>
+<tr>
+<td>
+<p>Innovation Covariance</p>
+<p>(Compare real error against prediction)</p>
+</td>
+<td><img src="kalman1/b8244edccce06233d637b983b9ff251eb4b6b0fddee66c0ad99451501811b026.png"></td>
+</tr>
+<tr>
+<td>
+<p>Kalman Gain</p>
+<p>(Moderate the prediction)</p>
+</td>
+<td><img src="kalman1/3f156918631084946b0e66d08a37ba7301385a6fbfe81839dff5ebb36f9936d8.png"></td>
+</tr>
+<tr>
+<td>
+<p>State Update</p>
+<p>(New estimate of where we are)</p>
+</td>
+<td><img src="kalman1/1844424df4729fac95457931a606ca6aaed6ad28f3e5441ef538cbc782a0339b.png"></td>
+</tr>
+<tr>
+<td>
+<p>Covariance Update</p>
+<p>(New estimate of error)</p>
+</td>
+<td><img src="kalman1/37b96016dc51f5206d01a35c58d7e488d5be78696f2468c8b6cff64d5ab37a7e.png"></td>
+</tr>
+</tbody>
+</table>
+<p>&nbsp;</p>
+<p>Inputs:</p>
+<p>Un = Control vector. This indicates the magnitude of any control system's or user's control on the situation.</p>
+<p>Zn = Measurement vector. This contains the real-world measurement we received in this time step.</p>
+<p>Outputs:</p>
+<p>Xn = Newest estimate of the current "true" state.</p>
+<p>Pn = Newest estimate of the average error for each part of the state.</p>
+<p>Constants:</p>
+<p>A = State transition matrix. Basically, multiply state by this and add control factors, and you get a prediction of the state for the next time step.</p>
+<p>B = Control matrix. This is used to define linear equations for any control factors.</p>
+<p>H = Observation matrix. Multiply a state vector by H to translate it to a measurement vector.</p>
+<p>Q = Estimated process error covariance. Finding precise values for Q and R are beyond the scope of this guide.</p>
+<p>R = Estimated measurement error covariance. Finding precise values for Q and R are beyond the scope of this guide.</p>
+<p>&nbsp;</p>
+<p>To program a Kalman Filter class, your constructor should have all the constant matrices, as well as an initial estimate of the state (x) and error (P). The step function should have the inputs (measurement and control vectors). In my version, you access outputs through "getter" functions.</p>
+<p>Here is a working Kalman Filter object, written in Python:</p>
+<p>&nbsp;</p>
+<div class="snippet"># Implements a linear Kalman filter.
+class KalmanFilterLinear:
+&nbsp; def __init__(self,_A, _B, _H, _x, _P, _Q, _R):
+&nbsp;&nbsp;&nbsp; self.A = _A&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; # State transition matrix.
+&nbsp;&nbsp;&nbsp; self.B = _B&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; # Control matrix.
+&nbsp;&nbsp;&nbsp; self.H = _H&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; # Observation matrix.
+&nbsp;&nbsp;&nbsp; self.current_state_estimate = _x # Initial state estimate.
+&nbsp;&nbsp;&nbsp; self.current_prob_estimate = _P&nbsp; # Initial covariance estimate.
+&nbsp;&nbsp;&nbsp; self.Q = _Q&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; # Estimated error in process.
+&nbsp;&nbsp;&nbsp; self.R = _R&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; # Estimated error in measurements.
+&nbsp; def GetCurrentState(self):
+&nbsp;&nbsp;&nbsp; return self.current_state_estimate
+&nbsp; def Step(self,control_vector,measurement_vector):
+&nbsp;&nbsp;&nbsp; #---------------------------Prediction step-----------------------------
+&nbsp;&nbsp;&nbsp; predicted_state_estimate = self.A * self.current_state_estimate + self.B * control_vector
+&nbsp;&nbsp;&nbsp; predicted_prob_estimate = (self.A * self.current_prob_estimate) * numpy.transpose(self.A) + self.Q
+&nbsp;&nbsp;&nbsp; #--------------------------Observation step-----------------------------
+&nbsp;&nbsp;&nbsp; innovation = measurement_vector - self.H*predicted_state_estimate
+&nbsp;&nbsp;&nbsp; innovation_covariance = self.H*predicted_prob_estimate*numpy.transpose(self.H) + self.R
+&nbsp;&nbsp;&nbsp; #-----------------------------Update step-------------------------------
+&nbsp;&nbsp;&nbsp; kalman_gain = predicted_prob_estimate * numpy.transpose(self.H) * numpy.linalg.inv(innovation_covariance)
+&nbsp;&nbsp;&nbsp; self.current_state_estimate = predicted_state_estimate + kalman_gain * innovation
+&nbsp;&nbsp;&nbsp; # We need the size of the matrix so we can make an identity matrix.
+&nbsp;&nbsp;&nbsp; size = self.current_prob_estimate.shape[0]
+&nbsp;&nbsp;&nbsp; # eye(n) = nxn identity matrix.
+&nbsp;&nbsp;&nbsp; self.current_prob_estimate = (numpy.eye(size)-kalman_gain*self.H)*predicted_prob_estimate
+</div>
+<p>&nbsp;</p>
+<h2>Single-Variable Example</h2>
+<br />
+<h3>Situation</h3>
+<p>This is a <a href="http://www.cs.unc.edu/~welch/kalman/kalmanIntro.html">classic</a> <a href="http://prism2.mem.drexel.edu/~billgreen/slam/papers/kalmanIntro.pdf">example</a>. We will attempt to measure a constant DC voltage with a noisy voltmeter. We will use the Kalman filter to filter out the noise and converge toward the true value.</p>
+<p>&nbsp;</p>
+<p>The state transition equation:</p>
+<p><img src="kalman1/769181af8fce44c113d73883d95294a92bd2664f3935581ac128d93b5526701b.png"></p>
+<p>Vn = The current voltage.</p>
+<p>Vn-1 = The voltage last time.</p>
+<p>Wn = Random noise (measurement error).</p>
+<p>&nbsp;</p>
+<p>Since the voltage never changes, it is a very simple equation. The objective of the Kalman filter is to mitigate the influence of Wn in this equation.</p>
+<p>&nbsp;</p>
+<h3>Simulation</h3>
+<p>In Python, we simulate this situation with the following object:</p>
+<p>&nbsp;</p>
+<div class="snippet">class Voltmeter:
+&nbsp; def __init__(self,_truevoltage,_noiselevel):
+&nbsp;&nbsp;&nbsp; self.truevoltage = _truevoltage
+&nbsp;&nbsp;&nbsp; self.noiselevel = _noiselevel
+&nbsp; def GetVoltage(self):
+&nbsp;&nbsp;&nbsp; return self.truevoltage
+&nbsp; def GetVoltageWithNoise(self):
+&nbsp;&nbsp;&nbsp; return random.gauss(self.GetVoltage(),self.noiselevel)
+</div>
+<br />
+<h3>Preparation</h3>
+<p>The next step is to prepare the Kalman filter inputs and constants. Since this is a single-variable example, all matrices are 1x1.</p>
+<p>&nbsp;</p>
+<p>Matrix "A" is what you need to multiply to last time's state to get the newest state. Since this is a constant voltage, we just multiply by 1.</p>
+<p><img src="kalman1/955ade71169d4e1a054fcc05ffef729dc8e43c57718bd1d929fc6f8f091e376d.png"></p>
+<p>A = 1</p>
+<p>&nbsp;</p>
+<p>Matrix "H" is what you need to multiply the incoming measurement to convert it to a state. Since we get the voltage directly, we just multiply by 1.</p>
+<p>H = 1</p>
+<p>&nbsp;</p>
+<p>Matrix "B" is the control matrix. It's a constant voltage and there's no input in the model we can change to affect anything, so we'll set it to 0.<br />B = 0</p>
+<p>&nbsp;</p>
+<p>Matrix "Q" is the process covariance. Since we know the exact situation, we'll use a very small covariance.</p>
+<p>Q = 0.00001</p>
+<p>&nbsp;</p>
+<p>Matrix "R" is the measurement covariance. We'll use a conservative estimate of 0.1.<br />R = 0.1</p>
+<p>&nbsp;</p>
+<p>Matrix "xhat" is your initial prediction of the voltage. We'll set it to 3 to show how resilient the filter is.</p>
+<p>xhat = 3</p>
+<p>&nbsp;</p>
+<p>Matrix "P" is your initial prediction of the covariance. We'll just pick an arbitrary value (1) because we don't know any better.<br />P = 1</p>
+<p>&nbsp;</p>
+<h3>Execution and Python code</h3>
+<p><a href="kalman1/kalman1.py.txt"><img src="kalman1/kalman1.png" /></a></p>
+<p>For brevity, I don't list all the code in this guide. The complete file is available: <a href="kalman1/kalman1.py.txt">kalman1.py</a> . I highly recommend you read through it and play with the starting values.</p>
+<p>&nbsp;</p>
+<h2>Multi-Variable Example</h2>
+<br />
+<h3>Situation</h3>
+<p>We will use a common physics problem with a twist. This example will involve firing a ball from a cannon at at 45-degree angle at a muzzle velocity of 100 units/sec. However, we will also have a camera that will record the ball's position from the side every second. The positions measured from the camera have significant measurement error. We also have precise detectors in the ball that give the X and Y velocity every second.</p>
+<p><img src="kalman1/cannon.png" alt="" /></p>
+<p>(not drawn to scale)</p>
+<p>&nbsp;</p>
+<p>The kinematic equations for this situation, done to death in physics classes around the world, are:</p>
+<p><img src="kalman1/c1f393a3bfa1fd031a33b70126f3fbad2a6c844c9c5de4b99ce317480a527246.png"></p>
+<p>&nbsp;</p>
+<p>Our filter is discrete. Let's convert these equations to a recurrence relation, with delta-t being a fixed time step:</p>
+<p><img src="kalman1/a053ababab736dab3d9a17380ac4f101bcca477ccad738fbcb9b41d3bfdb5dde.png"></p>
+<p>&nbsp;</p>
+<p>These equations can be represented in an alternate form shown here:</p>
+<p>&nbsp;</p>
+<p><img src="kalman1/1cb6849face889856602e139bab247f201a065c4895d720c9484bf80a3ef8a75.png"></p>
+<p>&nbsp;</p>
+<p>Note that rows are the summation of the influence of the variables in each column. This notation will be important to illustrate something in the Preparation step, so remember it.</p>
+<p>&nbsp;</p>
+<h3>Simulation</h3>
+<p>We will simulate the cannonball's trajectory mid-flight with the following Python object:</p>
+<p>&nbsp;</p>
+<div class="snippet"># Simulates the classic physics problem of a cannon shooting a ball in a
+# parabolic arc.&nbsp; In addition to giving "true" values back, you can also ask
+# for noisy values back to test Kalman filters.
+class Cannon:
+&nbsp; #--------------------------------VARIABLES----------------------------------
+&nbsp; angle = 45 # The angle from the ground to point the cannon.
+&nbsp; muzzle_velocity = 100 # Muzzle velocity of the cannon.
+&nbsp; gravity = [0,-9.81] # A vector containing gravitational acceleration.
+&nbsp; # The initial velocity of the cannonball
+&nbsp; velocity = [muzzle_velocity*math.cos(angle*math.pi/180), muzzle_velocity*math.sin(angle*math.pi/180)]
+&nbsp; loc = [0,0] # The initial location of the cannonball.
+&nbsp; acceleration = [0,0] # The initial acceleration of the cannonball.
+&nbsp; #---------------------------------METHODS-----------------------------------
+&nbsp; def __init__(self,_timeslice,_noiselevel):
+&nbsp;&nbsp;&nbsp; self.timeslice = _timeslice
+&nbsp;&nbsp;&nbsp; self.noiselevel = _noiselevel
+&nbsp; def add(self,x,y):
+&nbsp;&nbsp;&nbsp; return x + y
+&nbsp; def mult(self,x,y):
+&nbsp;&nbsp;&nbsp; return x * y
+&nbsp; def GetX(self):
+&nbsp;&nbsp;&nbsp; return self.loc[0]
+&nbsp; def GetY(self):
+&nbsp;&nbsp;&nbsp; return self.loc[1]
+&nbsp; def GetXWithNoise(self):
+&nbsp;&nbsp;&nbsp; return random.gauss(self.GetX(),self.noiselevel)
+&nbsp; def GetYWithNoise(self):
+&nbsp;&nbsp;&nbsp; return random.gauss(self.GetY(),self.noiselevel)
+&nbsp; def GetXVelocity(self):
+&nbsp;&nbsp;&nbsp; return self.velocity[0]
+&nbsp; def GetYVelocity(self):
+&nbsp;&nbsp;&nbsp; return self.velocity[1]
+&nbsp; # Increment through the next timeslice of the simulation.
+&nbsp; def Step(self):
+&nbsp;&nbsp;&nbsp; # We're gonna use this vector to timeslice everything.
+&nbsp;&nbsp;&nbsp; timeslicevec = [self.timeslice,self.timeslice]
+&nbsp;&nbsp;&nbsp; # Break gravitational force into a smaller time slice.
+&nbsp;&nbsp;&nbsp; sliced_gravity = map(self.mult,self.gravity,timeslicevec)
+&nbsp;&nbsp;&nbsp; # The only force on the cannonball is gravity.
+&nbsp;&nbsp;&nbsp; sliced_acceleration = sliced_gravity
+&nbsp;&nbsp;&nbsp; # Apply the acceleration to velocity.
+&nbsp;&nbsp;&nbsp; self.velocity = map(self.add, self.velocity, sliced_acceleration)
+&nbsp;&nbsp;&nbsp; sliced_velocity = map(self.mult, self.velocity, timeslicevec )
+&nbsp;&nbsp;&nbsp; # Apply the velocity to location.
+&nbsp;&nbsp;&nbsp; self.loc = map(self.add, self.loc, sliced_velocity)
+&nbsp;&nbsp;&nbsp; # Cannonballs shouldn't go into the ground.
+&nbsp;&nbsp;&nbsp; if self.loc[1] &lt; 0:
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; self.loc[1] = 0
+</div>
+<p>&nbsp;</p>
+<h3>Preparation</h3>
+<p>Remember this alternate form of the kinematic equations I showed you?</p>
+<p>&nbsp;</p>
+<p><img src="kalman1/1cb6849face889856602e139bab247f201a065c4895d720c9484bf80a3ef8a75.png"></p>
+<p>&nbsp;</p>
+<p>The first part is A in disguise (with the variables removed), and the second part is the control vector, provided you use the B matrix shown here:</p>
+<p>&nbsp;</p>
+<p>Compare:</p>
+<p><img src="kalman1/4c75fd3eb1ab0ef2e1f2dc2f6b43fd8447fe2610be44702b0d6ec585e08fa516.png"></p>
+<p>to:</p>
+<p><img src="kalman1/efedcdf078404b3c12c534136ab446838e0feb42a42fcbf69d8eaff557c24bc0.png"></p>
+<p><br />When a state is multiplied by H, it is converted to measurement notation. Since our measurements map directly to the state, we just have to multiply them all by 1 to convert our measurements to state:</p>
+<p><img src="kalman1/8530cbb0a35d7b2fd5379593ca0c6851687ec0ca4221ac1f47eae909288da510.png"></p>
+<p>&nbsp;</p>
+<p>X0 is the initial guess for the ball's state. Notice that this is where we break the muzzle velocity into its X/Y components. We're also going to set y way off on purpose to illustrate how fast the filter can deal with this:</p>
+<p><img src="kalman1/984589f34edc2f5f54106201b90cf28f972b3cbee8fd0c2e64ec98e07091176b.png"></p>
+<p>&nbsp;</p>
+<p>P is our initial guess for the covariance of our state. We're just going to set them all to 1 since we don't know any better (and it works anyway). If you want to know better, consult a more detailed guide.<br /><br /><img src="kalman1/76ff222c740a772e80b391ec7b847bc408c4b7876e06c942411a6771520b0ecc.png"></p>
+<p>&nbsp;</p>
+<p>Q is our estimate of the process error. Since we created the process (the simulation) and mapped our equations directly from it, we can safely assume there is no process error:</p>
+<p><br /><img src="kalman1/d3b19e3dc4d8c46e394b2017f993a2059f797a35dead49c158af81fa8cc76a57.png"></p>
+<p>&nbsp;</p>
+<p>R is our estimate of the measurement error covariance. We'll just set them all arbitrarily to 0.2. Try playing with this value in the real code.</p>
+<p>&nbsp;</p>
+<p><img src="kalman1/9b3f697104d4fc2f17c43c984773c2eed2ff0348d8be08d5032db2b92b226204.png"></p>
+<p>&nbsp;</p>
+<h3>Execution and Python code</h3>
+<p><a href="kalman1/kalman2.py.txt"><img src="kalman1/kalman2.png" /></a></p>
+<p>That's a pretty good estimate, given how much error our measurements have!</p>
+<p>The complete code for this example is available at: <a href="kalman1/kalman2.py.txt">kalman2.py</a></p>
+<p>&nbsp;</p>
+<h2>Conclusion</h2>
+<br />
+<p>I hope that this guide was useful to you. This is a living document. If you have any suggestions, comments, etc, please send me a message at greg {at] czerniak (dot} info so I can make this guide even better. ESPECIALLY send me a message if you got confused somewhere -- you're probably not the first or last person that will get hung up at that point.</p>
+<p>&nbsp;</p>
+<h2>References</h2>
+<br />
+<p><span style="text-decoration: underline;">Kalman Filters</span></p>
+<ul>
+<li><span style="font-family: Arial;"><a href="http://www.cs.unc.edu/~welch/kalman/">The Kalman Filter</a>: A great launching point for information about the Kalman filter.<br /></span></li>
+<li><span style="font-family: Arial;"><a href="https://secure.wikimedia.org/wikipedia/en/wiki/Kalman_filter">Kalman Filter</a>: Wikipedia page. I modified the equations from this page for my version.<br /></span></li>
+<li><a href="http://prism2.mem.drexel.edu/~billgreen/slam/slam.html"><span style="font-family: Arial;">Simultaneous Localization and Mapping (SLAM)</span></a> : Seeing the matrices in the PowerPoint slides inspired me to write this guide. Most of my examples are variations of examples in these slides.</li>
+<li><a href="http://www.frc.ri.cmu.edu/~alonzo/pubs/reports/kalman_V2.pdf">A 3D State Space Formulation of a Navigation Kalman Filter for Autonomous Vehicles</a> : This text goes in-depth about using Kalman filters in robotics, and it has great introductory material.</li>
+<li><a href="http://www.amazon.com/Optimal-Filtering-Dover-Books-Engineering/dp/0486439380">Optimal Filtering</a> : This book goes into detail on using Kalman filters.</li>
+</ul>
+<p><span style="text-decoration: underline;">Tools</span></p>
+<ul>
+<li><a href="http://hausheer.osola.com/latex2png">Latex2png, latex2gif, latex2eps, latex2jpg</a> : This site generates image files from LaTeX code.</li>
+<li><a href="http://pbworks.com/">PBworks</a> : This is how I organize my thoughts. </li>
+</ul>
+<h2>Special Thanks</h2>
+<ul>
+<li>Special thanks to Stefan Wollny from Korea for detecting and reporting a variance/covariance typo.</li>
+<li>Special thanks to Dave Bloss of Topsfield, Massachusetts and Robby Nevels for detecting and reporting a mistake with the cannonball physics equations (1/2gt^2 instead of gt^2).</li>
+<li>Special thanks to Robby Nevels for detecting and reporting a mistake with the Kalman filter code (innovation was being calculated wrong).</li>
+</ul>
+
+          </section>
+      </div>
+      </div> <!--! end of #container -->
+  <footer>
+      Powered by <a href="http://ringce.com/hyde">hyde</a>.
+  </footer>
+      <!-- Javascript at the bottom for fast page loading -->
+    <!-- Grab Google CDN's jQuery, with a protocol relative URL; fall back to local if necessary -->
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.5.1/jquery.js"></script>
+  <script>window.jQuery || document.write('<script src="js/libs/jquery-1.5.1.min.js">\x3C/script>')</script>
+  
+    
+
+  <!--[if lt IE 7 ]>
+    <script src="js/libs/dd_belatedpng.js"></script>
+    <script>DD_belatedPNG.fix('img, .png_bg'); // Fix any <img> or .png_bg bg-images. Also, please read goo.gl/mZiyb </script>
+  <![endif]-->
+
+      
+  </body>
+</html>
