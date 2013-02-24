@@ -1,0 +1,157 @@
+<!doctype html>
+<!-- https://github.com/paulirish/html5-boilerplate/blob/master/index.html -->
+<!-- paulirish.com/2008/conditional-stylesheets-vs-css-hacks-answer-neither/ -->
+<!--[if lt IE 7 ]> <html lang="en" class="no-js ie6"> <![endif]-->
+<!--[if IE 7 ]>    <html lang="en" class="no-js ie7"> <![endif]-->
+<!--[if IE 8 ]>    <html lang="en" class="no-js ie8"> <![endif]-->
+<!--[if (gte IE 9)|!(IE)]><!--> <html lang="en" class="no-js"> <!--<![endif]-->
+<head>
+    <meta charset="">
+
+  <!-- Always force latest IE rendering engine (even in intranet) & Chrome Frame
+       Remove this if you use the .htaccess -->
+  <meta http-equiv="X-UA-Compatible" content="">
+
+  <!-- encoding must be specified within the first 512 bytes
+        www.whatwg.org/specs/web-apps/current-work/multipage/semantics.html#charset -->
+
+  <!-- meta element for compatibility mode needs to be before
+        all elements except title & meta
+        msdn.microsoft.com/en-us/library/cc288325(VS.85).aspx -->
+  <!-- Chrome Frame is only invoked if meta element for
+        compatibility mode is within the first 1K bytes
+        code.google.com/p/chromium/issues/detail?id=23003 -->
+
+  <title>Greg Czerniak's Website - Kalman Filters for Undergrads 2</title>
+  <meta name="description" content="Non-linear Kalman Filter tutorial.">
+  <meta name="author" content="Gregory Czerniak">
+
+  <!--  Mobile viewport optimized: j.mp/bplateviewport -->
+  <meta name="viewport" content="">
+
+    <!-- Place favicon.ico & apple-touch-icon.png
+        in the root of your domain and delete these references -->
+  <link rel="shortcut icon" href="/favicon.ico">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  
+    <link rel="stylesheet" href="/media/css/site.css">
+  <link rel="stylesheet" href="/media/css/syntax.css">
+  
+    <!-- All JavaScript at the bottom, except for Modernizr which
+        enables HTML5 elements & feature detects -->
+    <script src="/media/js/libs/modernizr-1.7.min.js"></script>
+    </head>
+<body id="index">
+    <div id="container">
+            <div id="main" role="main">
+          <header class="banner clearfix">
+          <h1>Greg Czerniak's Website</h1>
+            <h3>-</h3>                              <nav class=main_nav>
+    <ul>
+                <li>
+            <a title="Home Page"
+                class="button white home"
+                href="/index.html">
+                Home
+            </a>
+        </li>        <li>
+            <a title="Code"
+                class="button white code"
+                href="/code">
+                Code
+            </a>
+        </li>        <li>
+            <a title="Games"
+                class="button white games"
+                href="/games">
+                Games
+            </a>
+        </li>        <li>
+            <a title="Guides"
+                class="button white guides"
+                href="/guides">
+                Guides
+            </a>
+        </li>    </ul>
+</nav>
+                    </header>
+          <section class="content">
+          <p><b>NOTE: This guide is currently a work in progress.</b></p>
+<br />
+<h2>Introduction</h2>
+<br />
+<p>In this second article, we will use Kalman filters for non-linear situations.</p>
+<p><u>This guide will cover:</u></p>
+<ul>
+<li>How to filter noise in non-linear models with Kalman filters.</li>
+<li>Example code implementing non-linear Kalman filters in Python.</li>
+</ul>
+<h2>Why and How?</h2>
+<br />
+<p>Kalman filters, as mentioned in Kalman Filters for Undergrads 1, are linear.  In the canonical form Kalman filters can solve elementary physics problems like cannonballs in flight.  However, useful real-world problems are seldom linear.</p>
+<br />
+<p>How do we take a linear Kalman filter and use it for non-linear problems?  Effectively, we use the equivalent of a first-order Taylor expansion -- we linearize around our best guess of the state and then use the linear Kalman filter with our approximation.</p>
+<br />
+<p>Linear Kalman filters are provably optimal.  However, non-linear (extended) Kalman filters are not.  Since we put the non-linear problem through a set of linear approximations, it will diverge from the actual problem similar to the divergence of a polygonal approximation of a differential equation using Euler's method.</p>
+<br />
+<p>(needs a picture)</p>
+<br />
+<p>Despite this lack of optimality, non-linear (extended) Kalman filters are useful for making estimations using real world data.</p>
+<br />
+<h2>Non-Linear (Extended) Kalman Filters</h2>
+
+<h2>Single-Variable Example</h2>
+<br />
+<p>In the linear tutorial, our single-variable example was a noisy but constant voltage graph (DC).  Similarly, the single-variable example for non-linear Kalman filters will be sinusoidal voltage (AC).</p>
+<br />
+<p>First, let's define the situation in Python.  We'll create an object that defines the sinusoidal voltage pattern and give it random noise.</p>
+<br />
+<p>(bunch of Python code)</p>
+<br />
+<p>Before using the EKF, let's try using the linear Kalman filter to do this.  I'm not going to explain the parameters in-depth here (look at the linear tutorial for that), but here's a graph of what happens:</p>
+<br />
+<p>(graph)</p>
+<br />
+<p>Our objective is to do better than this with an Extended Kalman Filter.</p>
+<br />
+<p>First, we need to define problem in terms of an Extended Kalman Filter.  To do this, we need to establish the state transition and control functions, as well as the Jacobians that the EKF expects.  Let's begin:</p>
+<br />
+(bunch of math stuff)
+
+Now that we have the relevant matrices and functions that we need, let's plug all this into a Python script.
+
+(bunch of Python code)
+
+From this, we get the following graph:
+
+(graph)
+
+As you can see, the error is much less than with a normal linear Kalman filter.  However, let's show what happens when you don't set up the problem correctly and use the wrong Jacobian:
+
+(graph)
+
+Here, I deliberately used the wrong Jacobian for the state transition.  As you can see, it diverges wildly from the real answer.  This is why it's vital that you're sure your mathematical model of the situation is correct -- the EKF can make your results much more accurate, or it can make it useless.
+<h2>Multiple-Variable Example</h2>
+<h2>Conclusion</h2>
+<h2>References</h2>
+          </section>
+      </div>
+      </div> <!--! end of #container -->
+  <footer>
+      Powered by <a href="http://ringce.com/hyde">hyde</a>.
+  </footer>
+      <!-- Javascript at the bottom for fast page loading -->
+    <!-- Grab Google CDN's jQuery, with a protocol relative URL; fall back to local if necessary -->
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.5.1/jquery.js"></script>
+  <script>window.jQuery || document.write('<script src="js/libs/jquery-1.5.1.min.js">\x3C/script>')</script>
+  
+    
+
+  <!--[if lt IE 7 ]>
+    <script src="js/libs/dd_belatedpng.js"></script>
+    <script>DD_belatedPNG.fix('img, .png_bg'); // Fix any <img> or .png_bg bg-images. Also, please read goo.gl/mZiyb </script>
+  <![endif]-->
+
+      
+  </body>
+</html>
